@@ -1,6 +1,45 @@
-import { default as React } from "react";
+import { default as React, useState, useEffect } from "react";
+
+interface EthCurrency {
+  type: string,
+  price: number,
+  floor: number,
+  decimal: number,
+  timeStamp: string
+};
 
 function App() {
+  const [ ethUsd, setEthUsd ] = useState<EthCurrency>({ 
+    type: '',
+    price: 0,
+    floor: 0,
+    decimal: 0,
+    timeStamp: ''
+  });
+  
+  useEffect(() => {
+    setInterval(loadPrice, 5000)
+  }, []);
+
+  const loadPrice = () : void => {
+    fetch(`http://34.117.120.204/api/v1/fx/ETHUSD/ohlc`)
+      .then(res => res.json())
+      .then(data => setEthUsd(formatData(data)));
+  };
+
+  const formatData = (data: any) : EthCurrency => {
+    const price : number = Number(data.close);
+    const floor : number = Math.floor(price);
+
+    return {
+      type: data.pair,
+      price,
+      floor,
+      decimal: data.close.split('.')[1],
+      timeStamp: data.startTime.second
+    };    
+  };
+
   return (
     <div className="pt-12 bg-gray-50 sm:pt-16">
       <div className="px-4 mx-auto max-w-7xl sm:px-6 lg:px-8">
@@ -21,7 +60,7 @@ function App() {
                     ETH/USD
                   </dt>
                   <dd className="order-1 text-5xl font-extrabold text-gray-500">
-                    $1919<span className="text-2xl">.17</span>
+                    ${ethUsd.floor}<span className="text-2xl">.{ethUsd.decimal || '00'}</span>
                   </dd>
                 </div>
               </dl>
