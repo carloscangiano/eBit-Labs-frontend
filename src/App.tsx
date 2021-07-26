@@ -11,7 +11,7 @@ interface EthCurrency {
 };
 
 function App() {
-  const [ ethUsd, setEthUsd ] = useState<EthCurrency>({ 
+  const initialCurrency = { 
     type: '',
     price: 0,
     floor: 0,
@@ -19,26 +19,35 @@ function App() {
     timeStamp: '',
     rate: 0,
     htmlPrice: () => {}
-  });
-  
+  };
+  const [ ethUsd, setEthUsd ] = useState<EthCurrency>( initialCurrency );
+  const [ ethGbp, setEthGbp ] = useState<EthCurrency>( initialCurrency );
+
   useEffect(() => {
-    if(ethUsd.price === 0) {
-      loadPrice();
-    }
-    const timer = setInterval(loadPrice, 5000);
+    if(ethUsd.price === 0) loadPrices();
+    const timer = setInterval(loadPrices, 5000);
     return () => clearInterval(timer);
   }, [ethUsd]);
+  
+  const loadPrices = () => {
+    loadPrice('ETHUSD');
+    loadPrice('ETHGBP');
+  };
 
-  const loadPrice = () : void => {
-    fetch(`http://34.117.120.204/api/v1/fx/ETHUSD/ohlc`)
+  const loadPrice = (currency: string) : void => {
+    fetch(`http://34.117.120.204/api/v1/fx/${currency}/ohlc`)
       .then(res => res.json())
       .then(data => {
-        setEthUsd(formatData(data))
+        if(currency === 'ETHUSD') {
+          setEthUsd(formatData(data))
+        } else {
+          setEthGbp(formatData(data))
+        };        
       });
   };
 
   const getRate = (pair: string, newValue: number): any[] => {
-    const oldValue : number = pair == "ETH/USD" ? ethUsd.price: 0;
+    const oldValue : number = pair == "ETH/USD" ? ethUsd.price: ethGbp.price;
     let index = oldValue.toString().length;
     for (let i = 0; i < newValue.toString().length; i++) {
       if(oldValue.toString()[i] != newValue.toString()[i]) {
@@ -89,8 +98,8 @@ function App() {
           <div className="absolute inset-0 h-1/2 bg-gray-50" />
           <div className="relative px-4 mx-auto max-w-7xl sm:px-6 lg:px-8">
             <div className="max-w-4xl mx-auto">
-              <dl className="w-1/3 mx-auto bg-white rounded-lg shadow-lg">
-                <div className="flex flex-col p-6 text-center border-t border-gray-100 tooltip">
+              <dl className="w-1/3 mx-auto bg-white rounded-lg shadow-lg flex" style={{ width: "min-content" }}>
+                <div className="flex flex-col p-6 text-center border-t border-gray-100 tooltip border-right" style={{ border: "2px solid gray" }}>
                   <dt className="order-2 mt-2 text-lg font-medium leading-6 text-gray-500">
                     ETH/USD
                   </dt>
@@ -99,6 +108,17 @@ function App() {
                   </dd>
                   <span className="tooltiptext">{ethUsd.timeStamp}</span>
                 </div>
+
+                <div className="flex flex-col p-6 text-center border-t border-gray-100 tooltip border-left" style={{ border: "2px solid gray" }}>
+                  <dt className="order-2 mt-2 text-lg font-medium leading-6 text-gray-500">
+                    ETH/GBP
+                  </dt>
+                  <dd className="order-1 text-5xl font-extrabold text-gray-500">
+                    {ethGbp.htmlPrice()}
+                  </dd>
+                  <span className="tooltiptext">{ethUsd.timeStamp}</span>
+                </div>
+
               </dl>
             </div>
           </div>
