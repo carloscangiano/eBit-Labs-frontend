@@ -4,8 +4,10 @@ interface EthCurrency {
   type: string,
   price: number,
   floor: number,
-  decimal: number,
-  timeStamp: string
+  decimal: string,
+  timeStamp: string,
+  rate: number,
+  htmlPrice: any
 };
 
 function App() {
@@ -13,30 +15,63 @@ function App() {
     type: '',
     price: 0,
     floor: 0,
-    decimal: 0,
-    timeStamp: ''
+    decimal: '',
+    timeStamp: '',
+    rate: 0,
+    htmlPrice: () => {}
   });
   
   useEffect(() => {
-    setInterval(loadPrice, 5000)
-  }, []);
+    if(ethUsd.price === 0) {
+      loadPrice();
+    }
+    const timer = setInterval(loadPrice, 5000);
+    return () => clearInterval(timer);
+  }, [ethUsd]);
 
   const loadPrice = () : void => {
     fetch(`http://34.117.120.204/api/v1/fx/ETHUSD/ohlc`)
       .then(res => res.json())
-      .then(data => setEthUsd(formatData(data)));
+      .then(data => {
+        setEthUsd(formatData(data))
+      });
+  };
+
+  const getRate = (pair: string, newValue: number): any[] => {
+    const oldValue : number = pair == "ETH/USD" ? ethUsd.price: 0;
+    let index = oldValue.toString().length;
+    for (let i = 0; i < newValue.toString().length; i++) {
+      if(oldValue.toString()[i] != newValue.toString()[i]) {
+        index = i;
+        break;
+      };
+    };
+    return [index, ((oldValue === newValue || oldValue === 0) ? 'grey' : (oldValue > newValue ? 'red' : 'green'))];    
   };
 
   const formatData = (data: any) : EthCurrency => {
     const price : number = Number(data.close);
+    const decimal : string = data.close.split('.')[1];
     const floor : number = Math.floor(price);
+    const [index, rate] = getRate(data.pair, price);
+    
+    const htmlPrice : any = () => <> 
+          <span className="text-gray-500">
+            {floor.toString().substring(0, index)}</span>
+          <span className={`text-${rate}-500`}>
+          {floor.toString().substring(index, floor.toString().length)}</span>
+          {index != price.toString().length-1 && <span className={`text-2xl text-${rate}-500`}>.{decimal || '00'}</span>}
+          {index == price.toString().length-1 && <span className={`text-2xl`}>.{decimal.toString().substring(0,1)}<span className={`text-${rate}-500`}>{decimal.toString().substring(1,2)}</span></span>}
+          </>;
 
     return {
       type: data.pair,
       price,
       floor,
-      decimal: data.close.split('.')[1],
-      timeStamp: new Date(data.startTime.seconds * 1000).toISOString()
+      decimal,
+      timeStamp: new Date(data.startTime.seconds * 1000).toISOString(),
+      rate,
+      htmlPrice
     };    
   };
 
@@ -60,7 +95,7 @@ function App() {
                     ETH/USD
                   </dt>
                   <dd className="order-1 text-5xl font-extrabold text-gray-500">
-                    ${ethUsd.floor}<span className="text-2xl">.{ethUsd.decimal || '00'}</span>
+                    {ethUsd.htmlPrice()}
                   </dd>
                   <span className="tooltiptext">{ethUsd.timeStamp}</span>
                 </div>
